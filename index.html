@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>彩虹卡 🌈 線上療癒抽卡系統</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Noto Sans TC & Playfair Display -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap" rel="stylesheet">
+    <!-- html2canvas Library CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                        serif: ['"Playfair Display"', 'serif'],
+                    },
+                    colors: {
+                        'chakra-red': '#ef4444',
+                        'chakra-orange': '#f97316',
+                        'chakra-yellow': '#eab308',
+                        'chakra-green': '#10b981',
+                        'chakra-blue': '#06b6d4',
+                        'chakra-indigo': '#6366f1',
+                        'chakra-purple': '#a855f7',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Styles & Animation Utilities */
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            min-height: 100vh;
+        }
+
+        /* 3D Flip Card Animation Styles */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform-style: preserve-3d;
+        }
+
+        .card-inner.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1.5rem;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        /* Glassmorphism Effect */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Ambient Glow Shadows for Color Themes */
+        .glow-red { box-shadow: 0 15px 35px -5px rgba(239, 68, 68, 0.4); }
+        .glow-orange { box-shadow: 0 15px 35px -5px rgba(249, 115, 22, 0.4); }
+        .glow-yellow { box-shadow: 0 15px 35px -5px rgba(234, 179, 8, 0.4); }
+        .glow-green { box-shadow: 0 15px 35px -5px rgba(16, 185, 129, 0.4); }
+        .glow-blue { box-shadow: 0 15px 35px -5px rgba(6, 182, 212, 0.4); }
+        .glow-indigo { box-shadow: 0 15px 35px -5px rgba(99, 102, 241, 0.4); }
+        .glow-purple { box-shadow: 0 15px 35px -5px rgba(168, 85, 247, 0.4); }
+
+        /* Shimmering Effect */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .shimmer-bg {
+            background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite;
+        }
+    </style>
+</head>
+<body class="text-slate-800 font-sans flex flex-col justify-between min-h-screen">
+
+    <!-- Header Navigation -->
+    <header class="w-full py-4 px-6 glass-panel sticky top-0 z-30 shadow-sm border-b border-slate-200/50">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="resetToHome()">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-red-500 via-green-500 to-purple-500 p-0.5 shadow-md flex items-center justify-center">
+                    <div class="w-full h-full bg-white rounded-full flex items-center justify-center">
+                        <i class="fa-solid font-bold fa-rainbow text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-yellow-500 to-purple-600"></i>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-wide text-slate-800">Rainbow Cards</h1>
+                    <p class="text-xs text-slate-500 tracking-wider">彩虹卡・心靈正向肯定語句</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <button onclick="openEditorModal()" class="flex items-center space-x-2 px-3.5 py-2 rounded-full text-xs md:text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 transition font-medium">
+                    <i class="fa-solid fa-pen-to-square text-purple-500"></i>
+                    <span>自訂/編輯卡牌資料</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-5xl mx-auto w-full px-4 py-6 flex-grow flex flex-col justify-center items-center">
+
+        <!-- VIEW 1: HOME / DECK START -->
+        <section id="view-home" class="w-full max-w-2xl text-center flex flex-col items-center py-8">
+            <div class="mb-8">
+                <span class="inline-block px-4 py-1.5 rounded-full text-xs font-semibold tracking-wider text-purple-700 bg-purple-100/80 mb-4">
+                    ✨ 7 大色彩脈輪智慧
+                </span>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-slate-800 mb-4 tracking-tight">
+                    靜下心來，抽一張屬於你今天的彩虹祝福
+                </h2>
+                <p class="text-slate-600 text-sm md:text-base max-w-lg mx-auto leading-relaxed">
+                    彩虹卡包含七種顏色，代表七個能量中心。每張卡片都帶有溫暖正向的自我肯定，引導你關注內在的力量與愛。
+                </p>
+            </div>
+
+            <!-- 7 Color Preview Palette Icon -->
+            <div class="flex items-center justify-center gap-2 mb-10">
+                <span class="w-6 h-6 rounded-full bg-chakra-red shadow-sm"></span>
+                <span class="w-6 h-6 rounded-full bg-chakra-orange shadow-sm"></span>
+                <span class="w-6 h-6 rounded-full bg-chakra-yellow shadow-sm"></span>
+                <span class="w-6 h-6 rounded-full bg-chakra-green shadow-sm"></span>
+                <span class="w-6 h-6 rounded-full bg-chakra-blue shadow-sm"></span>
+                <span class="w-6 h-6 rounded-full bg-chakra-indigo shadow-sm"></span>
+                <span class="w-6 h-6 rounded-full bg-chakra-purple shadow-sm"></span>
+            </div>
+
+            <!-- Card Stack Preview Graphic -->
+            <div class="relative w-48 h-64 mb-10 cursor-pointer group" onclick="startDrawing()">
+                <div class="absolute inset-0 bg-gradient-to-tr from-purple-500 to-indigo-500 rounded-2xl rotate-6 group-hover:rotate-12 transition transform duration-300 opacity-60 shadow-lg"></div>
+                <div class="absolute inset-0 bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-2xl -rotate-6 group-hover:-rotate-12 transition transform duration-300 opacity-70 shadow-lg"></div>
+                <div class="absolute inset-0 bg-gradient-to-tr from-rose-500 to-amber-500 rounded-2xl group-hover:scale-105 transition transform duration-300 shadow-xl border-2 border-white/50 flex flex-col justify-center items-center p-6 text-white text-center">
+                    <i class="fa-solid fa-sparkles text-3xl mb-3 animate-pulse"></i>
+                    <p class="font-bold text-lg">開啟彩虹能量</p>
+                    <p class="text-xs opacity-90 mt-1">點擊開始抽卡</p>
+                </div>
+            </div>
+
+            <button onclick="startDrawing()" class="px-8 py-3.5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-rose-500 text-white font-bold shadow-lg hover:shadow-xl hover:scale-105 active:scale-95 transition transform flex items-center space-x-2 text-base">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>開始隨機抽牌</span>
+            </button>
+        </section>
+
+
+        <!-- VIEW 2: SINGLE CARD DRAWING STATE -->
+        <section id="view-draw" class="hidden w-full max-w-lg flex flex-col items-center py-4">
+            
+            <!-- Status Header -->
+            <div class="w-full flex justify-between items-center mb-6 px-2 text-sm text-slate-500 font-medium">
+                <span id="draw-count-indicator">已抽取：0 張</span>
+                <span id="draw-remaining-indicator">剩餘牌庫：0 張</span>
+            </div>
+
+            <!-- Interactive 3D Flip Card Container -->
+            <div class="perspective-1000 w-80 h-[28rem] md:w-84 md:h-[30rem] mb-8">
+                <div id="flip-card" class="card-inner cursor-pointer" onclick="revealCard()">
+                    
+                    <!-- Card Front (Back Pattern of the Playing Card) -->
+                    <div class="card-front bg-gradient-to-br from-slate-900 via-indigo-950 to-purple-950 text-white flex flex-col items-center justify-between p-8 shadow-2xl border-2 border-white/20 overflow-hidden">
+                        <div class="shimmer-bg absolute inset-0"></div>
+                        <div class="w-full flex justify-between items-center text-xs text-amber-300/80 tracking-widest uppercase">
+                            <span>Rainbow Affirmations</span>
+                            <span>✨</span>
+                        </div>
+                        <div class="text-center my-auto z-10 flex flex-col items-center">
+                            <div class="w-20 h-20 rounded-full border border-amber-300/30 flex items-center justify-center mb-4 bg-white/5 backdrop-blur-sm">
+                                <i class="fa-solid fa-rainbow text-4xl text-amber-300 animate-pulse"></i>
+                            </div>
+                            <p class="text-lg font-serif tracking-wider text-amber-200">心靈肯定卡</p>
+                            <p class="text-xs text-slate-300/80 mt-2">輕觸點擊翻開卡牌</p>
+                        </div>
+                        <div class="text-xs text-slate-400">彩虹能量陪伴你</div>
+                    </div>
+
+                    <!-- Card Back (Revealed Content) -->
+                    <div id="card-revealed-face" class="card-back rounded-3xl p-8 flex flex-col justify-between text-white shadow-2xl border-2 border-white/40 transition-all duration-300">
+                        <div class="flex justify-between items-center border-b border-white/20 pb-3">
+                            <span id="card-color-tag" class="px-3 py-1 rounded-full text-xs font-bold bg-white/20 backdrop-blur-md">紅色・海底輪</span>
+                            <span id="card-index-tag" class="text-xs font-mono opacity-80">#01</span>
+                        </div>
+                        
+                        <div class="my-auto text-center px-2">
+                            <i class="fa-solid fa-quote-left text-2xl opacity-40 mb-3 block"></i>
+                            <p id="card-text-content" class="text-xl md:text-2xl font-bold leading-relaxed tracking-wide drop-shadow-sm font-sans">
+                                我在生活的每個層面都感到安全與被支持。
+                            </p>
+                            <i class="fa-solid fa-quote-right text-2xl opacity-40 mt-3 block"></i>
+                        </div>
+
+                        <div class="pt-3 border-t border-white/20 text-center">
+                            <p id="card-theme-hint" class="text-xs font-medium tracking-widest opacity-90 uppercase">生存・安全感・自信</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Interactive Actions -->
+            <div id="draw-controls" class="flex flex-wrap gap-3 justify-center w-full">
+                <button id="btn-reveal" onclick="revealCard()" class="px-6 py-3 rounded-full bg-purple-600 hover:bg-purple-700 text-white font-bold shadow-md transition flex items-center space-x-2">
+                    <i class="fa-solid fa-hand-sparkles"></i>
+                    <span>翻開卡牌</span>
+                </button>
+
+                <button id="btn-next" onclick="drawNextCard()" class="hidden px-6 py-3 rounded-full bg-slate-800 hover:bg-slate-900 text-white font-bold shadow-md transition items-center space-x-2">
+                    <span>抽下一張</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+
+                <button id="btn-finish" onclick="finishAndShowOverview()" class="px-5 py-3 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold shadow-md transition flex items-center space-x-2">
+                    <i class="fa-solid fa-grip"></i>
+                    <span>查看卡牌總覽</span>
+                </button>
+
+                <button onclick="resetDeck()" class="p-3 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 transition" title="重新抽牌">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+
+        </section>
+
+
+        <!-- VIEW 3: COLLECTION & SCREENSHOT BOARD VIEW -->
+        <section id="view-overview" class="hidden w-full flex flex-col items-center py-4">
+            
+            <div class="text-center mb-6">
+                <h2 class="text-2xl md:text-3xl font-bold text-slate-800">✨ 你的彩虹卡心靈總覽</h2>
+                <p class="text-slate-500 text-sm mt-1">集結你所抽出的能量卡牌，可下載為圖片儲存珍藏</p>
+            </div>
+
+            <!-- CAPTURE CANVAS CONTAINER (Rendered Area for html2canvas) -->
+            <div id="capture-board" class="w-full max-w-4xl p-6 md:p-8 rounded-3xl bg-slate-900 text-white shadow-2xl border border-slate-800 my-2">
+                <!-- Board Header in Image -->
+                <div class="flex justify-between items-center border-b border-slate-700/80 pb-4 mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-red-500 via-green-500 to-purple-500 flex items-center justify-center p-0.5">
+                            <div class="w-full h-full bg-slate-900 rounded-full flex items-center justify-center">
+                                <i class="fa-solid fa-rainbow text-xs text-amber-300"></i>
+                            </div>
+                        </div>
+                        <span class="font-bold tracking-wider text-base text-slate-100">Rainbow Affirmation Cards</span>
+                    </div>
+                    <span id="capture-date" class="text-xs text-slate-400 font-mono">2026-10-21</span>
+                </div>
+
+                <!-- Grid of Drawn Cards -->
+                <div id="overview-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- Cards will be populated dynamically -->
+                </div>
+
+                <!-- Board Footer in Image -->
+                <div class="mt-8 pt-4 border-t border-slate-800 flex justify-between items-center text-xs text-slate-500">
+                    <span>🌈 陪伴內在，帶來溫暖與愛</span>
+                    <span>Rainbow Cards Canvas</span>
+                </div>
+            </div>
+
+            <!-- Action Toolbar -->
+            <div class="mt-8 flex flex-wrap gap-4 justify-center">
+                <button onclick="downloadScreenshot()" class="px-6 py-3.5 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold shadow-lg hover:shadow-xl transition flex items-center space-x-2 text-sm md:text-base">
+                    <i class="fa-solid fa-camera"></i>
+                    <span>📸 儲存 / 下載卡牌總覽截圖</span>
+                </button>
+
+                <button onclick="continueDrawing()" id="btn-continue-draw" class="px-6 py-3.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-md transition flex items-center space-x-2 text-sm md:text-base">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>繼續抽牌</span>
+                </button>
+
+                <button onclick="resetDeck()" class="px-5 py-3.5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold transition flex items-center space-x-2 text-sm md:text-base">
+                    <i class="fa-solid fa-rotate-right"></i>
+                    <span>重新開始</span>
+                </button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full py-4 text-center text-xs text-slate-400 border-t border-slate-200/50 mt-8">
+        <p>Rainbow Cards Online System &copy; 溫暖正向語句抽卡測驗</p>
+    </footer>
+
+    <!-- MODAL: CUSTOM CARD DATA EDITOR -->
+    <div id="editor-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-sliders text-purple-600"></i>
+                    <h3 class="font-bold text-slate-800">自訂卡牌資料 (JSON)</h3>
+                </div>
+                <button onclick="closeEditorModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto flex-grow space-y-4">
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    你可以在此處修改或貼上自己的彩虹卡語句與色系。資料格式為標準 JSON 陣列。
+                </p>
+                
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">卡牌資料庫 (JSON Format)</label>
+                    <textarea id="json-input" rows="12" class="w-full font-mono text-xs p-3 bg-slate-900 text-emerald-400 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none border border-slate-700 leading-relaxed"></textarea>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                <button onclick="restoreDefaultCards()" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 transition">
+                    恢復預設卡牌
+                </button>
+                <div class="flex space-x-2">
+                    <button onclick="closeEditorModal()" class="px-4 py-2 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200/50 transition">
+                        取消
+                    </button>
+                    <button onclick="saveCustomCards()" class="px-5 py-2 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-md transition">
+                        儲存並套用
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        /**
+         * 7 COLOR CHAKRA SYSTEM CONFIGURATION
+         */
+        const COLOR_THEMES = {
+            red: {
+                name: '紅色・海底輪',
+                bgClass: 'bg-gradient-to-br from-red-500 to-rose-600',
+                glowClass: 'glow-red',
+                hex: '#ef4444',
+                theme: '生存・安全感・自信'
+            },
+            orange: {
+                name: '橙色・臍輪',
+                bgClass: 'bg-gradient-to-br from-orange-400 to-amber-600',
+                glowClass: 'glow-orange',
+                hex: '#f97316',
+                theme: '情緒・創造力・喜悅'
+            },
+            yellow: {
+                name: '黃色・太陽輪',
+                bgClass: 'bg-gradient-to-br from-yellow-400 to-amber-500',
+                glowClass: 'glow-yellow',
+                hex: '#eab308',
+                theme: '意志力・自我價值・勇氣'
+            },
+            green: {
+                name: '綠色・心輪',
+                bgClass: 'bg-gradient-to-br from-emerald-400 to-green-600',
+                glowClass: 'glow-green',
+                hex: '#10b981',
+                theme: '愛・包容・療癒'
+            },
+            blue: {
+                name: '藍色・喉輪',
+                bgClass: 'bg-gradient-to-br from-cyan-500 to-blue-600',
+                glowClass: 'glow-blue',
+                hex: '#06b6d4',
+                theme: '表達・溝通・真實'
+            },
+            indigo: {
+                name: '靛色・眉心輪',
+                bgClass: 'bg-gradient-to-br from-indigo-500 to-blue-800',
+                glowClass: 'glow-indigo',
+                hex: '#6366f1',
+                theme: '直覺・洞察力・智慧'
+            },
+            purple: {
+                name: '紫色・頂輪',
+                bgClass: 'bg-gradient-to-br from-purple-500 to-fuchsia-700',
+                glowClass: 'glow-purple',
+                hex: '#a855f7',
+                theme: '靈性・和諧・宇宙連結'
+            }
+        };
+
+        /**
+         * PRELOADED DEFAULT CARDS DATA (Includes 7 Colors)
+         */
+        const DEFAULT_CARDS = [
+            { id: 1, color: "red", text: "我有足夠的勇氣面對今天的所有挑戰，我是安全的。" },
+            { id: 2, color: "red", text: "我深深地愛並接納我自己現在的樣子。" },
+            { id: 3, color: "orange", text: "我的內在擁有源源不絕的創造力與喜悅。" },
+            { id: 4, color: "orange", text: "我順應生命的流動，允許自己享受當下。" },
+            { id: 5, color: "yellow", text: "我相信自己的選擇，並對自己的生命充滿信心。" },
+            { id: 6, color: "yellow", text: "我是有價值的，我值得擁有世上所有的美好。" },
+            { id: 7, color: "green", text: "我的心充滿慈愛與和諧，我向愛敞開。" },
+            { id: 8, color: "green", text: "我原諒過去，並給予自己與他人無限的溫柔。" },
+            { id: 9, color: "blue", text: "我能清晰且真誠地表達自己內心的真實想法。" },
+            { id: 10, color: "blue", text: "我靜心傾聽內在的聲音，我的語言帶有正面力量。" },
+            { id: 11, color: "indigo", text: "我信任自己的直覺，它指引我走向正確的方向。" },
+            { id: 12, color: "indigo", text: "我以清晰與智慧的視野看待生活中的每一件事。" },
+            { id: 13, color: "purple", text: "我與宇宙萬物完美和諧地連結在一起。" },
+            { id: 14, color: "purple", text: "平安與靜謐充滿我的心靈與意識。" }
+        ];
+
+        // Global State Variables
+        let activeCardsPool = [];
+        let drawnCardsHistory = [];
+        let currentDrawnCard = null;
+        let isFlipped = false;
+
+        // On Page Load Initialization
+        window.addEventListener('DOMContentLoaded', () => {
+            loadCardsData();
+            updateCurrentDate();
+        });
+
+        /**
+         * Load Cards Data from LocalStorage or Default
+         */
+        function loadCardsData() {
+            const saved = localStorage.getItem('rainbow_cards_custom');
+            if (saved) {
+                try {
+                    activeCardsPool = JSON.parse(saved);
+                } catch (e) {
+                    activeCardsPool = [...DEFAULT_CARDS];
+                }
+            } else {
+                activeCardsPool = [...DEFAULT_CARDS];
+            }
+        }
+
+        /**
+         * Set Modern Date on Collection Board
+         */
+        function updateCurrentDate() {
+            const dateEl = document.getElementById('capture-date');
+            const now = new Date();
+            dateEl.textContent = now.toISOString().split('T')[0];
+        }
+
+        /**
+         * Navigation: Switch Views
+         */
+        function switchView(viewName) {
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-draw').classList.add('hidden');
+            document.getElementById('view-overview').classList.add('hidden');
+
+            if (viewName === 'home') {
+                document.getElementById('view-home').classList.remove('hidden');
+            } else if (viewName === 'draw') {
+                document.getElementById('view-draw').classList.remove('hidden');
+            } else if (viewName === 'overview') {
+                document.getElementById('view-overview').classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Start Drawing Flow
+         */
+        function startDrawing() {
+            if (drawnCardsHistory.length === 0) {
+                // Shuffle cards at start
+                shuffleArray(activeCardsPool);
+            }
+            switchView('draw');
+            prepareNextDraw();
+        }
+
+        /**
+         * Reset to Home State
+         */
+        function resetToHome() {
+            switchView('home');
+        }
+
+        /**
+         * Prepare Next Card Slot
+         */
+        function prepareNextDraw() {
+            const flipCard = document.getElementById('flip-card');
+            flipCard.classList.remove('is-flipped');
+            isFlipped = false;
+
+            // Update Control Buttons State
+            document.getElementById('btn-reveal').classList.remove('hidden');
+            document.getElementById('btn-next').classList.add('hidden');
+
+            // Find remaining undrawn cards
+            const undrawn = activeCardsPool.filter(c => !drawnCardsHistory.some(d => d.id === c.id));
+
+            document.getElementById('draw-count-indicator').textContent = `已抽取：${drawnCardsHistory.length} 張`;
+            document.getElementById('draw-remaining-indicator').textContent = `剩餘牌庫：${undrawn.length} 張`;
+
+            if (undrawn.length === 0) {
+                finishAndShowOverview();
+                return;
+            }
+
+            // Pick candidate card randomly
+            currentDrawnCard = undrawn[Math.floor(Math.random() * undrawn.length)];
+            
+            // Set data onto Card Revealed Face (Hidden initially)
+            const colorConfig = COLOR_THEMES[currentDrawnCard.color] || COLOR_THEMES['purple'];
+            const face = document.getElementById('card-revealed-face');
+            
+            // Apply Gradient & Glow classes
+            face.className = `card-back rounded-3xl p-8 flex flex-col justify-between text-white shadow-2xl border-2 border-white/40 transition-all duration-300 ${colorConfig.bgClass} ${colorConfig.glowClass}`;
+            
+            document.getElementById('card-color-tag').textContent = colorConfig.name;
+            document.getElementById('card-index-tag').textContent = `#${drawnCardsHistory.length + 1}`;
+            document.getElementById('card-text-content').textContent = currentDrawnCard.text;
+            document.getElementById('card-theme-hint').textContent = colorConfig.theme;
+        }
+
+        /**
+         * Interactive Flip / Reveal Card Animation
+         */
+        function revealCard() {
+            if (isFlipped) return;
+
+            const flipCard = document.getElementById('flip-card');
+            flipCard.classList.add('is-flipped');
+            isFlipped = true;
+
+            // Push to history if not exists
+            if (!drawnCardsHistory.some(c => c.id === currentDrawnCard.id)) {
+                drawnCardsHistory.push(currentDrawnCard);
+            }
+
+            // Update UI Counters and Buttons
+            document.getElementById('draw-count-indicator').textContent = `已抽取：${drawnCardsHistory.length} 張`;
+            
+            const undrawnCount = activeCardsPool.length - drawnCardsHistory.length;
+            document.getElementById('draw-remaining-indicator').textContent = `剩餘牌庫：${undrawnCount} 張`;
+
+            document.getElementById('btn-reveal').classList.add('hidden');
+            
+            if (undrawnCount > 0) {
+                document.getElementById('btn-next').classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Draw Next Card Handler
+         */
+        function drawNextCard() {
+            prepareNextDraw();
+        }
+
+        /**
+         * Reset Deck Progress
+         */
+        function resetDeck() {
+            drawnCardsHistory = [];
+            currentDrawnCard = null;
+            shuffleArray(activeCardsPool);
+            startDrawing();
+        }
+
+        /**
+         * Continue Drawing From Overview View
+         */
+        function continueDrawing() {
+            switchView('draw');
+            if (isFlipped) {
+                prepareNextDraw();
+            }
+        }
+
+        /**
+         * Render Card Collection Grid & Display View
+         */
+        function finishAndShowOverview() {
+            if (drawnCardsHistory.length === 0) {
+                alert('你尚未抽出任何卡牌喔！');
+                return;
+            }
+
+            const grid = document.getElementById('overview-grid');
+            grid.innerHTML = '';
+
+            // Render each drawn card into grid
+            drawnCardsHistory.forEach((card, index) => {
+                const colorConfig = COLOR_THEMES[card.color] || COLOR_THEMES['purple'];
+                
+                const cardEl = document.createElement('div');
+                cardEl.className = `rounded-2xl p-5 text-white flex flex-col justify-between shadow-lg ${colorConfig.bgClass} min-h-[14rem] transition hover:scale-[1.02]`;
+                cardEl.innerHTML = `
+                    <div class="flex justify-between items-center text-xs opacity-90 border-b border-white/20 pb-2">
+                        <span class="font-bold">${colorConfig.name}</span>
+                        <span class="font-mono">#0${index + 1}</span>
+                    </div>
+                    <div class="my-auto py-3 text-center">
+                        <p class="font-medium text-sm md:text-base leading-relaxed tracking-wide">
+                            「${card.text}」
+                        </p>
+                    </div>
+                    <div class="text-[10px] text-center opacity-80 uppercase tracking-widest pt-2 border-t border-white/10">
+                        ${colorConfig.theme}
+                    </div>
+                `;
+                grid.appendChild(cardEl);
+            });
+
+            // Hide/Show Continue Drawing button based on cards left
+            const btnContinue = document.getElementById('btn-continue-draw');
+            if (drawnCardsHistory.length >= activeCardsPool.length) {
+                btnContinue.classList.add('hidden');
+            } else {
+                btnContinue.classList.remove('hidden');
+            }
+
+            switchView('overview');
+        }
+
+        /**
+         * Download PNG Screenshot with html2canvas
+         */
+        function downloadScreenshot() {
+            const board = document.getElementById('capture-board');
+
+            // Show temporary loading hint
+            const originalButton = event.currentTarget;
+            const originalHTML = originalButton.innerHTML;
+            originalButton.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>圖片產生中...</span>`;
+            originalButton.disabled = true;
+
+            html2canvas(board, {
+                scale: 2, // High resolution output
+                useCORS: true,
+                backgroundColor: '#0f172a' // Slate 900
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `彩虹卡心靈總覽_${new Date().toISOString().slice(0,10)}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                // Restore button state
+                originalButton.innerHTML = originalHTML;
+                originalButton.disabled = false;
+            }).catch(err => {
+                console.error(err);
+                alert('截圖失敗，請重試！');
+                originalButton.innerHTML = originalHTML;
+                originalButton.disabled = false;
+            });
+        }
+
+        /**
+         * MODAL LOGIC & CUSTOM JSON EDITOR
+         */
+        function openEditorModal() {
+            const jsonArea = document.getElementById('json-input');
+            jsonArea.value = JSON.stringify(activeCardsPool, null, 2);
+            document.getElementById('editor-modal').classList.remove('hidden');
+        }
+
+        function closeEditorModal() {
+            document.getElementById('editor-modal').classList.add('hidden');
+        }
+
+        function saveCustomCards() {
+            const jsonArea = document.getElementById('json-input');
+            try {
+                const parsed = JSON.parse(jsonArea.value);
+                if (!Array.isArray(parsed)) {
+                    alert('資料格式必須為 JSON 陣列！');
+                    return;
+                }
+                activeCardsPool = parsed;
+                localStorage.setItem('rainbow_cards_custom', JSON.stringify(parsed));
+                alert('卡牌資料已成功更新！');
+                closeEditorModal();
+                drawnCardsHistory = [];
+                resetToHome();
+            } catch (e) {
+                alert('JSON 格式錯誤，請檢查語法：' + e.message);
+            }
+        }
+
+        function restoreDefaultCards() {
+            if (confirm('確定要恢復預設的彩虹卡內容嗎？')) {
+                activeCardsPool = [...DEFAULT_CARDS];
+                localStorage.removeItem('rainbow_cards_custom');
+                document.getElementById('json-input').value = JSON.stringify(DEFAULT_CARDS, null, 2);
+                alert('已重置為預設卡牌內容。');
+            }
+        }
+
+        /**
+         * Helper: Fisher-Yates Array Shuffle
+         */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+    </script>
+</body>
+</html>
